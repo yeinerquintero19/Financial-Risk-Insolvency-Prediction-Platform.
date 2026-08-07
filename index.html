@@ -47,6 +47,9 @@
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     body {
       font-family: 'Outfit', 'Inter', sans-serif;
@@ -901,35 +904,60 @@
 
   <!-- APPLICATION LOGIC & AUTH DATABASE SYSTEM -->
   <script>
-    // --- PERSISTENT USER DATABASE SYSTEM (STORAGE IN LOCALSTORAGE) ---
-    const defaultUsers = [
-      { name: "Ing. Yeiner Quintero", email: "yeiner@riskvision.ai", pass: "123", initials: "YQ" },
-      { name: "Usuario Demo", email: "demo@riskvision.ai", pass: "123", initials: "UD" }
-    ];
+    // =====================================================
+    // SUPABASE AUTH — Base de Datos en la Nube Real
+    // Proyecto: Financial-Risk-Insolvency-Prediction-Platform
+    // =====================================================
+    const SUPABASE_URL = "https://oaanubskenojmkgiqgm.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_CS83XjXc0tf57wiSPji14Q_trpWNf-R";
 
-    function getUsersDB() {
-      const stored = localStorage.getItem('RV_USER_DB');
-      if(!stored) {
-        localStorage.setItem('RV_USER_DB', JSON.stringify(defaultUsers));
-        return defaultUsers;
-      }
-      return JSON.parse(stored);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let activeUser = null;
+
+    // LOGIN usando Supabase Auth oficial
+    async function loginWithSupabase(email, pass) {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+      // Recuperar nombre del perfil guardado en user_metadata
+      const meta = data.user?.user_metadata || {};
+      const name = meta.full_name || data.user.email;
+      const parts = name.trim().split(' ');
+      let initials = parts[0].substring(0, 1).toUpperCase();
+      if (parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
+      return { id: data.user.id, name, email: data.user.email, initials };
     }
 
-    function saveUserToDB(userObj) {
-      const db = getUsersDB();
-      db.push(userObj);
-      localStorage.setItem('RV_USER_DB', JSON.stringify(db));
+    // REGISTRO usando Supabase Auth oficial
+    async function registerWithSupabase({ name, email, pass, initials }) {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password: pass,
+        options: { data: { full_name: name } }
+      });
+      if (error) throw error;
+      return { id: data.user.id, name, email: data.user.email, initials };
     }
 
-    let activeUser = JSON.parse(localStorage.getItem('RV_CURRENT_USER')) || null;
+    // CERRAR SESIÓN usando Supabase Auth
+    async function logoutFromSupabase() {
+      await supabaseClient.auth.signOut();
+    }
 
-    function initAuth() {
-      if(!activeUser) {
-        document.getElementById('authOverlay').classList.remove('hidden');
-      } else {
+    async function initAuth() {
+      // Verificar sesión activa en Supabase
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session && session.user) {
+        const meta = session.user.user_metadata || {};
+        const name = meta.full_name || session.user.email;
+        const parts = name.trim().split(' ');
+        let initials = parts[0].substring(0, 1).toUpperCase();
+        if (parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
+        activeUser = { id: session.user.id, name, email: session.user.email, initials };
         document.getElementById('authOverlay').classList.add('hidden');
         updateUserUI();
+      } else {
+        document.getElementById('authOverlay').classList.remove('hidden');
       }
     }
 
@@ -952,26 +980,35 @@
       }
     }
 
-    function handleLoginSubmit(e) {
+    async function handleLoginSubmit(e) {
       e.preventDefault();
       const email = document.getElementById('loginEmail').value.trim().toLowerCase();
       const pass = document.getElementById('loginPassword').value;
       const errBox = document.getElementById('loginError');
 
-      const users = getUsersDB();
-      const found = users.find(u => u.email.toLowerCase() === email && u.pass === pass);
-
-      if(found) {
-        activeUser = found;
-        localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
-        document.getElementById('authOverlay').classList.add('hidden');
-        updateUserUI();
-      } else {
+      try {
+        const found = await loginWithSupabase(email, pass);
+        if(found) {
+          activeUser = found;
+          document.getElementById('authOverlay').classList.add('hidden');
+          updateUserUI();
+        } else {
+          errBox.classList.remove('hidden');
+        }
+      } catch(err) {
+        let msg = "Correo o contraseña incorrectos.";
+        if (err && err.message) {
+          if (/email not confirmed/i.test(err.message)) msg = "Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.";
+          else if (/invalid/i.test(err.message)) msg = "Correo o contraseña incorrectos.";
+          else msg = "Error de conexión con la base de datos.";
+        }
+        document.getElementById('loginErrorMsg').innerText = msg;
         errBox.classList.remove('hidden');
+        console.error(err);
       }
     }
 
-    function handleRegisterSubmit(e) {
+    async function handleRegisterSubmit(e) {
       e.preventDefault();
       const name = document.getElementById('regName').value.trim();
       const email = document.getElementById('regEmail').value.trim().toLowerCase();
@@ -979,31 +1016,39 @@
       const errBox = document.getElementById('registerError');
       const errMsg = document.getElementById('registerErrorMsg');
 
-      const users = getUsersDB();
-      if(users.some(u => u.email.toLowerCase() === email)) {
-        errMsg.innerText = "El correo ya está registrado en la base de datos.";
-        errBox.classList.remove('hidden');
-        return;
-      }
-
       // Compute Initials
       const parts = name.split(' ');
       let initials = parts[0].substring(0, 1).toUpperCase();
       if(parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
 
-      const newUser = { name, email, pass, initials };
-      saveUserToDB(newUser);
-
-      // Auto login
-      activeUser = newUser;
-      localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
-      document.getElementById('authOverlay').classList.add('hidden');
-      updateUserUI();
+      try {
+        const newUser = await registerWithSupabase({ name, email, pass, initials });
+        // Auto login post-registro
+        activeUser = newUser;
+        document.getElementById('authOverlay').classList.add('hidden');
+        updateUserUI();
+        // Si Supabase requiere confirmación de email, informar al usuario
+        if (!newUser.id) {
+          document.getElementById('authOverlay').classList.remove('hidden');
+          errMsg.innerText = "✅ Cuenta creada. Revisa tu correo para confirmar y luego inicia sesión.";
+          errBox.classList.remove('hidden');
+        }
+      } catch(err) {
+        let msg = "No se pudo crear el usuario.";
+        if (err && err.message) {
+          if (/already registered|already exists|duplicate/i.test(err.message)) msg = "El correo ya está registrado. Inicia sesión.";
+          else if (/password/i.test(err.message)) msg = "La contraseña debe tener al menos 6 caracteres.";
+          else msg = err.message;
+        }
+        errMsg.innerText = msg;
+        errBox.classList.remove('hidden');
+        console.error(err);
+      }
     }
 
-    function handleLogout() {
+    async function handleLogout() {
       activeUser = null;
-      localStorage.removeItem('RV_CURRENT_USER');
+      await logoutFromSupabase();
       switchAuthView('login');
       document.getElementById('authOverlay').classList.remove('hidden');
     }
