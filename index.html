@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RiskVision Pro — Plataforma Inteligente de Salud Financiera y Predicción de Riesgo</title>
+  <meta name="description" content="Detecta empresas en riesgo de quiebra mediante análisis financiero profundo y modelos predictivos avanzados.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f4ff',
+              100: '#e0e9fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#1e1b4b',
+            },
+            dark: {
+              bg: '#090d16',
+              card: '#111726',
+              border: '#1f293d',
+              input: '#1a2234',
+              hover: '#182033'
+            }
+          },
+          fontFamily: {
+            sans: ['Outfit', 'Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      background-color: #090d16;
+      color: #f3f4f6;
+    }
+    
+    .glass-panel {
+      background: rgba(17, 23, 38, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    
+    .glass-panel-hover:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .risk-high { background: radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(17,23,38,0) 70%); }
+    .risk-medium { background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, rgba(17,23,38,0) 70%); }
+    .risk-low { background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, rgba(17,23,38,0) 70%); }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- AUTHENTICATION OVERLAY (LOGIN / REGISTRO) -->
+  <div id="authOverlay" class="fixed inset-0 bg-dark-bg z-50 flex items-center justify-center p-4">
+    <div class="glass-panel border border-dark-border rounded-3xl w-full max-w-md p-8 shadow-2xl space-y-6 relative overflow-hidden">
+      
+      <!-- Ambient Glow -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-brand-600/30 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <!-- Brand Logo -->
+      <div class="text-center space-y-2">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center mx-auto shadow-lg shadow-brand-500/30">
+          <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">RiskVision <span class="text-xs px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-400 font-semibold border border-brand-500/30">Pro</span></h1>
+        <p class="text-xs text-gray-400" id="authSubtitle">Inicia sesión en tu cuenta corporativa para acceder</p>
+      </div>
+
+      <!-- FORM: INICIAR SESIÓN -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Correo Electrónico</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-gray-500 absolute left-3 top-3"></i>
+            <input type="email" id="loginEmail" value="yeiner@riskvision.ai" required placeholder="tu@empresa.com"
+                   class="w-full bg-dark-input border border-dark-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Contraseña</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-gray-500 absolute left-3 top-3"></i>
+            <input type="password" id="loginPassword" value="123" required placeholder="••••••••"
+                   class="w-full bg-dark-input border border-dark-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div id="loginError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span id="loginErrorMsg">Correo o contraseña incorrectos.</span>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-medium text-xs shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+          <span>Iniciar Sesión</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+
+        <div class="pt-2 text-center text-xs text-gray-400">
+          ¿No tienes una cuenta? <button type="button" onclick="switchAuthView('register')" class="text-brand-400 font-semibold hover:underline">Regístrate gratis</button>
+        </div>
+      </form>
+
+      <!-- FORM: REGISTRO DE USUARIOS -->
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Nombre Completo</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-gray-500 absolute left-3 top-3"></i>
+            <input type="text" id="regName" required placeholder="Ej. Ing. Yeiner Quintero"
+                   class="w-full bg-dark-input border border-dark-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Correo Electrónico</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-gray-500 absolute left-3 top-3"></i>
+            <input type="email" id="regEmail" required placeholder="nuevo@empresa.com"
+                   class="w-full bg-dark-input border border-dark-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Contraseña</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-gray-500 absolute left-3 top-3"></i>
+            <input type="password" id="regPassword" required placeholder="Crear contraseña"
+                   class="w-full bg-dark-input border border-dark-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div id="registerError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span id="registerErrorMsg">Error al crear usuario.</span>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+          <span>Crear Cuenta Guardada</span>
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+        </button>
+
+        <div class="pt-2 text-center text-xs text-gray-400">
+          ¿Ya tienes cuenta? <button type="button" onclick="switchAuthView('login')" class="text-brand-400 font-semibold hover:underline">Iniciar Sesión</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- APP LAYOUT -->
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR NAV -->
+    <aside class="w-64 bg-dark-bg border-r border-dark-border flex flex-col justify-between hidden md:flex z-20">
+      <div>
+        <!-- Logo Header -->
+        <div class="p-6 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+            <i data-lucide="shield-alert" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+              RiskVision <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 font-semibold border border-brand-500/30">Pro</span>
+            </h1>
+            <p class="text-xs text-gray-400">Financial Risk Platform</p>
+          </div>
+        </div>
+
+        <!-- Company Switcher Selector -->
+        <div class="px-4 mb-4">
+          <div class="p-2.5 rounded-xl bg-dark-card border border-dark-border flex items-center justify-between cursor-pointer hover:border-gray-600 transition" onclick="toggleCompanyModal()">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <div class="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-400 font-bold flex items-center justify-center text-sm border border-indigo-800/40 shrink-0" id="currentCompanyAvatar">
+                TC
+              </div>
+              <div class="truncate">
+                <div class="text-xs font-semibold text-white truncate" id="currentCompanyName">TechCorp Solutions</div>
+                <div class="text-[10px] text-gray-400" id="currentCompanyIndustry">Tecnología SaaS</div>
+              </div>
+            </div>
+            <i data-lucide="chevrons-up-down" class="w-4 h-4 text-gray-400 shrink-0"></i>
+          </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="px-3 space-y-1">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-600/10 border border-brand-500/20 text-brand-400 transition">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Dashboard Ejecutivo</span>
+          </button>
+          <button onclick="switchTab('chat')" id="nav-chat" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-dark-hover transition">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <span>Asistente Financiero</span>
+            <span class="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">SMART</span>
+          </button>
+          <button onclick="switchTab('predictive')" id="nav-predictive" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-dark-hover transition">
+            <i data-lucide="line-chart" class="w-4 h-4"></i>
+            <span>Modelos Predictivos</span>
+          </button>
+          <button onclick="switchTab('editor')" id="nav-editor" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-dark-hover transition">
+            <i data-lucide="calculator" class="w-4 h-4"></i>
+            <span>Datos & Métricas</span>
+          </button>
+          <button onclick="switchTab('reports')" id="nav-reports" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-dark-hover transition">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <span>Reportes e Informes</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="p-4 border-t border-dark-border">
+        <div class="flex items-center gap-3 p-2 rounded-xl bg-dark-card border border-dark-border">
+          <div class="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-xs">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </div>
+          <div class="text-xs">
+            <div class="font-medium text-white">Engine Activo</div>
+            <div class="text-[10px] text-emerald-400 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Diagnóstico en Tiempo Real
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-dark-bg relative">
+      
+      <!-- TOP NAVBAR -->
+      <header class="h-16 border-b border-dark-border bg-dark-bg/80 backdrop-blur-md sticky top-0 z-10 px-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button class="md:hidden p-2 rounded-lg bg-dark-card text-gray-400 hover:text-white" onclick="toggleMobileSidebar()">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h2 class="text-base font-semibold text-white" id="pageTitle">Dashboard de Diagnóstico Financiero</h2>
+            <p class="text-xs text-gray-400 hidden sm:block">Análisis preventivo de insolvencia y scoring en tiempo real</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="switchTab('editor')" class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 hover:bg-brand-500 text-white transition shadow-lg shadow-brand-600/20">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Ingresar Datos</span>
+          </button>
+
+          <button onclick="exportAuditReport()" class="p-2 rounded-lg bg-dark-card border border-dark-border text-gray-400 hover:text-white transition" title="Exportar Reporte">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+
+          <div class="h-4 w-px bg-dark-border mx-1"></div>
+
+          <!-- USER AVATAR & LOGOUT BUTTON -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center font-bold text-xs text-indigo-300" id="userAvatarBadge">
+                YQ
+              </div>
+              <span class="text-xs font-medium text-gray-300 hidden md:block" id="userDisplayName">Ing. Yeiner Quintero</span>
+            </div>
+
+            <button onclick="handleLogout()" class="p-1.5 rounded-lg bg-dark-card hover:bg-dark-hover text-gray-400 hover:text-rose-400 border border-dark-border transition" title="Cerrar Sesión">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+      </header>
+
+      <!-- TAB 1: DASHBOARD EJECUTIVO -->
+      <div id="tab-dashboard" class="p-6 space-y-6 max-w-7xl mx-auto w-full">
+        
+        <!-- RISK BANNER HERO -->
+        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden transition-all duration-300" id="riskBanner">
+          <div class="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
+            
+            <div class="flex items-center gap-6 w-full lg:w-auto">
+              <!-- Gauge Radial Display -->
+              <div class="relative flex items-center justify-center shrink-0">
+                <svg class="w-32 h-32 transform -rotate-90">
+                  <circle cx="64" cy="64" r="54" stroke="currentColor" stroke-width="12" class="text-gray-800" fill="transparent" />
+                  <circle id="riskMeterCircle" cx="64" cy="64" r="54" stroke="currentColor" stroke-width="12" 
+                          stroke-dasharray="339.29" stroke-dashoffset="100" stroke-linecap="round"
+                          class="text-amber-500 transition-all duration-1000 ease-out" fill="transparent" />
+                </svg>
+                <div class="absolute flex flex-col items-center justify-center text-center">
+                  <span class="text-3xl font-extrabold tracking-tight text-white" id="riskScoreVal">48%</span>
+                  <span class="text-[10px] uppercase font-bold tracking-wider text-gray-400">Riesgo</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span id="riskBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wide">
+                    Riesgo Medio
+                  </span>
+                  <span class="text-xs text-gray-400">• Modelo Altman Z-Score: <strong id="altmanVal" class="text-white">1.82</strong> (Zona Gris)</span>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-1" id="riskTitle">Presión de Liquidez a Corto Plazo</h3>
+                <p class="text-xs text-gray-300 max-w-xl leading-relaxed" id="riskDescription">
+                  La empresa presenta un margen ajustado de capital de trabajo y una alta concentración de compromisos de pasivo circulante para los próximos 90 días.
+                </p>
+              </div>
+            </div>
+
+            <!-- Quick Action Recommendations Box -->
+            <div class="w-full lg:w-80 bg-dark-bg/60 p-4 rounded-xl border border-dark-border">
+              <div class="flex items-center justify-between text-xs font-semibold text-brand-400 mb-2">
+                <span class="flex items-center gap-1.5"><i data-lucide="zap" class="w-3.5 h-3.5"></i> Plan Preventivo</span>
+                <span class="text-[10px] text-gray-400">Prioridad Alta</span>
+              </div>
+              <p class="text-xs text-gray-300 leading-snug" id="aiActionPrompt">
+                Reducir gastos operativos un 8.5% y renegociar plazos con los 2 principales proveedores de materias primas.
+              </p>
+              <button onclick="switchTab('chat')" class="mt-3 w-full py-1.5 text-xs font-medium bg-brand-600/20 hover:bg-brand-600/30 text-brand-300 border border-brand-500/30 rounded-lg transition flex items-center justify-center gap-1.5">
+                <span>Consultar Preguntas Frecuentes</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- FINANCIAL KPI CARDS GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <!-- Ventas -->
+          <div class="glass-panel p-4 rounded-xl border border-dark-border glass-panel-hover transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-gray-400">Ventas Totales (Mensual)</span>
+              <div class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">
+                <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-white mb-1" id="kpiSales">$145,000</div>
+            <div class="flex items-center gap-1 text-xs text-emerald-400">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+              <span>+4.2% respecto al mes anterior</span>
+            </div>
+          </div>
+
+          <!-- Utilidad Neta -->
+          <div class="glass-panel p-4 rounded-xl border border-dark-border glass-panel-hover transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-gray-400">Utilidad Neta</span>
+              <div class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <i data-lucide="pie-chart" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-white mb-1" id="kpiNetProfit">$18,200</div>
+            <div class="flex items-center gap-1 text-xs text-emerald-400">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              <span>Margen Neto: <strong id="kpiNetMargin">12.5%</strong></span>
+            </div>
+          </div>
+
+          <!-- Ratio de Liquidez -->
+          <div class="glass-panel p-4 rounded-xl border border-dark-border glass-panel-hover transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-gray-400">Ratio Liquidez Corriente</span>
+              <div class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                <i data-lucide="scale" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-white mb-1" id="kpiLiquidity">1.15</div>
+            <div class="flex items-center gap-1 text-xs text-amber-400" id="kpiLiquidityNote">
+              <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+              <span>Ideal: &gt; 1.5 (Ajustado)</span>
+            </div>
+          </div>
+
+          <!-- Ratio Endeudamiento -->
+          <div class="glass-panel p-4 rounded-xl border border-dark-border glass-panel-hover transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-gray-400">Nivel de Endeudamiento</span>
+              <div class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400">
+                <i data-lucide="landmark" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-white mb-1" id="kpiDebtRatio">62.0%</div>
+            <div class="flex items-center gap-1 text-xs text-rose-400">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+              <span>Pasivo Total / Activo Total</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MAIN CHARTS SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Ventas vs Gastos Chart (2 Cols) -->
+          <div class="lg:col-span-2 glass-panel p-5 rounded-xl border border-dark-border">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-sm font-semibold text-white">Evolución de Ingresos vs Gastos</h4>
+                <p class="text-xs text-gray-400">Histórico de 6 meses y proyección con tendencia predictiva</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1 text-xs text-indigo-400"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Ventas</span>
+                <span class="flex items-center gap-1 text-xs text-rose-400"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Gastos</span>
+              </div>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="salesExpensesChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Estructura de Gastos & Costos (1 Col) -->
+          <div class="glass-panel p-5 rounded-xl border border-dark-border flex flex-col justify-between">
+            <div>
+              <h4 class="text-sm font-semibold text-white mb-1">Distribución de Gastos Operativos</h4>
+              <p class="text-xs text-gray-400 mb-4">Identificación de rubros críticos</p>
+              <div class="h-48 relative flex items-center justify-center">
+                <canvas id="expensesPieChart"></canvas>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-dark-border space-y-2 text-xs text-gray-300">
+              <div class="flex justify-between">
+                <span class="text-gray-400">Mayor centro de costo:</span>
+                <span class="font-medium text-white" id="topExpenseCategory">Nómina y Servicios (48%)</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-400">Potencial ahorro estimado:</span>
+                <span class="font-medium text-emerald-400" id="potentialSavingsVal">$12,400 / mes</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- LOWER SECTION: RADAR RATIOS & RECENT ALERTS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Radar Chart de Salud Financiera -->
+          <div class="glass-panel p-5 rounded-xl border border-dark-border">
+            <h4 class="text-sm font-semibold text-white mb-1">Evaluación de 5 Dimensiones</h4>
+            <p class="text-xs text-gray-400 mb-2">Desempeño relativo vs Estándar de la Industria</p>
+            <div class="h-56 relative flex items-center justify-center">
+              <canvas id="financialRadarChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Alertas Financieras & Factores Críticos -->
+          <div class="lg:col-span-2 glass-panel p-5 rounded-xl border border-dark-border flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-semibold text-white">Alertas de Riesgo Detectadas</h4>
+                <span class="text-xs text-gray-400">Actualizado recientemente</span>
+              </div>
+
+              <div class="space-y-2.5" id="alertsContainer">
+                <!-- Dynamic alerts loaded via JS -->
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-dark-border flex items-center justify-between">
+              <span class="text-xs text-gray-400">¿Quieres simular variaciones de ventas o gastos?</span>
+              <button onclick="switchTab('predictive')" class="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                <span>Ir al Simulador Predictivo</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TAB 2: CONSULTOR FINANCIERO INTERACTIVO (AUTOMATIZADO) -->
+      <div id="tab-chat" class="hidden p-6 max-w-5xl mx-auto w-full h-[calc(100vh-4rem)] flex flex-col">
+        <div class="glass-panel rounded-2xl flex-1 flex flex-col overflow-hidden border border-dark-border shadow-2xl">
+          
+          <!-- Header -->
+          <div class="p-4 bg-dark-card border-b border-dark-border flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                <i data-lucide="cpu" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  RiskBot Financial Analyst
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Respuestas Automatizadas</span>
+                </h3>
+                <p class="text-xs text-gray-400">Selecciona una pregunta de la lista para obtener una respuesta basada en las métricas de la empresa</p>
+              </div>
+            </div>
+
+            <button onclick="clearChatHistory()" class="text-xs text-gray-400 hover:text-white px-2.5 py-1 rounded-lg bg-dark-bg border border-dark-border transition">
+              Limpiar Pantalla
+            </button>
+          </div>
+
+          <!-- Chat Stream Messages Container -->
+          <div class="flex-1 p-6 overflow-y-auto space-y-4" id="chatMessages">
+            
+            <!-- Default Welcome Message -->
+            <div class="flex gap-3 max-w-2xl">
+              <div class="w-8 h-8 rounded-lg bg-brand-600/30 text-brand-300 border border-brand-500/30 flex items-center justify-center shrink-0 font-bold text-xs">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
+              </div>
+              <div class="bg-dark-card border border-dark-border p-4 rounded-2xl rounded-tl-none text-xs text-gray-200 leading-relaxed shadow-sm">
+                Hola. Soy <strong>RiskBot Financial Analyst</strong>, el asistente de consulta automatizado de RiskVision.
+                <br><br>
+                He procesado los estados financieros de <strong class="text-white" id="chatCompanyName">TechCorp Solutions</strong>. Haz clic en cualquiera de las <strong>preguntas frecuentes de abajo</strong> para obtener respuestas inmediatas y diagnósticos precisos.
+              </div>
+            </div>
+
+          </div>
+
+          <!-- AUTOMATED QUESTIONS PANEL -->
+          <div class="p-4 bg-dark-card border-t border-dark-border space-y-3">
+            <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="help-circle" class="w-3.5 h-3.5 text-brand-400"></i>
+              <span>Selecciona una consulta frecuente:</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              
+              <!-- Question 1: Creador -->
+              <button onclick="triggerAutomatedQuestion('creador')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border text-left transition flex items-center justify-between group">
+                <span class="text-xs text-gray-200 font-medium group-hover:text-brand-300">¿Quién es tu creador?</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 transition"></i>
+              </button>
+
+              <!-- Question 2: Riesgo de quiebra -->
+              <button onclick="triggerAutomatedQuestion('riesgo')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border text-left transition flex items-center justify-between group">
+                <span class="text-xs text-gray-200 font-medium group-hover:text-brand-300">¿Mi empresa está en riesgo de quiebra?</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 transition"></i>
+              </button>
+
+              <!-- Question 3: Gastos a reducir -->
+              <button onclick="triggerAutomatedQuestion('gastos')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border text-left transition flex items-center justify-between group">
+                <span class="text-xs text-gray-200 font-medium group-hover:text-brand-300">¿Qué gastos debo reducir este mes?</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 transition"></i>
+              </button>
+
+              <!-- Question 4: Caida de ventas 15% -->
+              <button onclick="triggerAutomatedQuestion('caida_ventas')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border text-left transition flex items-center justify-between group">
+                <span class="text-xs text-gray-200 font-medium group-hover:text-brand-300">¿Qué pasaría si las ventas caen 15%?</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 transition"></i>
+              </button>
+
+              <!-- Question 5: Producto menos rentable -->
+              <button onclick="triggerAutomatedQuestion('producto')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border text-left transition flex items-center justify-between group">
+                <span class="text-xs text-gray-200 font-medium group-hover:text-brand-300">¿Qué línea genera menor utilidad?</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 transition"></i>
+              </button>
+
+              <!-- Question 6: Capacidad de endeudamiento -->
+              <button onclick="triggerAutomatedQuestion('deuda')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border text-left transition flex items-center justify-between group">
+                <span class="text-xs text-gray-200 font-medium group-hover:text-brand-300">¿Cuál es el nivel de endeudamiento?</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 transition"></i>
+              </button>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB 3: MODELOS PREDICTIVOS & SIMULADOR -->
+      <div id="tab-predictive" class="hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+        
+        <!-- Header -->
+        <div class="glass-panel p-6 rounded-2xl border border-dark-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              Simulador de Escenarios Financieros y Quiebra
+            </h3>
+            <p class="text-xs text-gray-400">Modifica las variables macro/operativas para proyectar la probabilidad de insolvencia a 6 meses.</p>
+          </div>
+          <button onclick="resetSimulator()" class="px-3 py-1.5 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-300 hover:text-white transition flex items-center gap-1.5">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Restablecer Valores</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Controls Column (1 col) -->
+          <div class="glass-panel p-5 rounded-xl border border-dark-border space-y-6">
+            <h4 class="text-sm font-semibold text-white border-b border-dark-border pb-3">Variables del Escenario</h4>
+            
+            <!-- Slider 1: Caída de Ventas -->
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-300 font-medium">Variación en Ventas</span>
+                <span class="text-indigo-400 font-bold" id="simSalesVal">-0%</span>
+              </div>
+              <input type="range" id="simSalesSlider" min="-50" max="30" value="0" step="5" oninput="updateSimulation()"
+                     class="w-full h-2 bg-dark-input rounded-lg appearance-none cursor-pointer accent-brand-500">
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>-50% (Crisis)</span>
+                <span>0% (Actual)</span>
+                <span>+30% (Crecimiento)</span>
+              </div>
+            </div>
+
+            <!-- Slider 2: Incremento de Costos / Insumos -->
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-300 font-medium">Variación Costos Operativos</span>
+                <span class="text-rose-400 font-bold" id="simCostsVal">+0%</span>
+              </div>
+              <input type="range" id="simCostsSlider" min="-20" max="40" value="0" step="5" oninput="updateSimulation()"
+                     class="w-full h-2 bg-dark-input rounded-lg appearance-none cursor-pointer accent-rose-500">
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>-20% (Ahorro)</span>
+                <span>0% (Actual)</span>
+                <span>+40% (Inflación)</span>
+              </div>
+            </div>
+
+            <!-- Slider 3: Recorte de Gastos Fijos -->
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-300 font-medium">Plan de Reducción de Gastos</span>
+                <span class="text-emerald-400 font-bold" id="simExpensesVal">0%</span>
+              </div>
+              <input type="range" id="simExpensesSlider" min="0" max="35" value="0" step="5" oninput="updateSimulation()"
+                     class="w-full h-2 bg-dark-input rounded-lg appearance-none cursor-pointer accent-emerald-500">
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>0% (Sin cambios)</span>
+                <span>15%</span>
+                <span>35% (Recorte severo)</span>
+              </div>
+            </div>
+
+            <!-- Simulation Summary Box -->
+            <div class="p-4 rounded-xl bg-dark-bg border border-dark-border space-y-3">
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Impacto Simulado</div>
+              
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-300">Nuevo Riesgo de Quiebra:</span>
+                <span class="text-sm font-extrabold text-amber-400" id="simRiskResult">48%</span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-300">Runway de Caja Estimado:</span>
+                <span class="text-sm font-bold text-white" id="simRunwayResult">5.2 Meses</span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-300">Utilidad Mensual Estimada:</span>
+                <span class="text-sm font-bold text-emerald-400" id="simProfitResult">$18,200</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Predictive Projection Chart (2 cols) -->
+          <div class="lg:col-span-2 glass-panel p-5 rounded-xl border border-dark-border flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h4 class="text-sm font-semibold text-white">Proyección de Flujo de Caja (Próximos 6 Meses)</h4>
+                  <p class="text-xs text-gray-400">Comparativa: Escenario Actual vs Escenario Simulado</p>
+                </div>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="flex items-center gap-1 text-gray-400"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Base</span>
+                  <span class="flex items-center gap-1 text-amber-400"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Simulado</span>
+                </div>
+              </div>
+
+              <div class="h-72 relative">
+                <canvas id="predictiveChart"></canvas>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-dark-border p-3 rounded-xl bg-dark-bg/50 text-xs text-gray-300 flex items-start gap-2.5">
+              <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
+              <div id="simDiagnosticText">
+                En el escenario base, la empresa mantiene solvencia durante 5.2 meses. El modelo sugiere recortar al menos un 10% en servicios externos para ampliar la liquidez preventiva a 8 meses.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TAB 4: EDITOR DE DATOS FINANCIEROS -->
+      <div id="tab-editor" class="hidden p-6 max-w-4xl mx-auto w-full space-y-6">
+        <div class="glass-panel p-6 rounded-2xl border border-dark-border">
+          <h3 class="text-lg font-bold text-white mb-1">Registro y Edición de Variables Financieras</h3>
+          <p class="text-xs text-gray-400 mb-6">Actualiza las cifras operativas de tu empresa para volver a ejecutar el motor predictivo.</p>
+
+          <form onsubmit="handleFinancialDataUpdate(event)" class="space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Ventas Mensuales ($)</label>
+                <input type="number" id="inputSales" value="145000" class="w-full bg-dark-input border border-dark-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Costo de Ventas / Insumos ($)</label>
+                <input type="number" id="inputCOGS" value="82000" class="w-full bg-dark-input border border-dark-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Gastos Operativos y Administrativos ($)</label>
+                <input type="number" id="inputExpenses" value="44800" class="w-full bg-dark-input border border-dark-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Activo Circulante (Efectivo + Cuentas por Cobrar) ($)</label>
+                <input type="number" id="inputCurrentAssets" value="95000" class="w-full bg-dark-input border border-dark-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Pasivo Circulante (Deudas a Corto Plazo) ($)</label>
+                <input type="number" id="inputCurrentLiabilities" value="82500" class="w-full bg-dark-input border border-dark-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Deuda Total de Largo Plazo ($)</label>
+                <input type="number" id="inputTotalDebt" value="120000" class="w-full bg-dark-input border border-dark-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+            </div>
+
+            <div class="pt-4 border-t border-dark-border flex items-center justify-end gap-3">
+              <button type="button" onclick="switchTab('dashboard')" class="px-4 py-2 rounded-xl bg-dark-bg border border-dark-border text-xs text-gray-300 hover:text-white">
+                Cancelar
+              </button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-lg shadow-brand-600/20 transition flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                <span>Recalcular Riesgo</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 5: REPORTES E INFORMES -->
+      <div id="tab-reports" class="hidden p-6 max-w-5xl mx-auto w-full space-y-6">
+        <div class="glass-panel p-6 rounded-2xl border border-dark-border">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-white">Informe Ejecutivo de Auditoría Financiera</h3>
+              <p class="text-xs text-gray-400">Generado por el motor de diagnóstico RiskVision AI</p>
+            </div>
+            <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white transition flex items-center gap-2">
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>Imprimir / Descargar PDF</span>
+            </button>
+          </div>
+
+          <!-- Printable Document Container -->
+          <div class="bg-dark-card border border-dark-border p-8 rounded-xl space-y-6 text-xs text-gray-200">
+            
+            <div class="flex justify-between items-start border-b border-dark-border pb-4">
+              <div>
+                <h4 class="text-xl font-bold text-white">RISKVISION AI — EXECUTIVE REPORT</h4>
+                <p class="text-gray-400 text-[11px]">Empresa: <span id="reportCompanyName" class="text-white font-semibold">TechCorp Solutions</span></p>
+                <p class="text-gray-400 text-[11px]">Auditor Responsable: <span class="text-brand-400 font-semibold" id="reportAuditorName">Ing. Yeiner Quintero</span></p>
+              </div>
+              <div class="text-right text-gray-400 text-[11px]">
+                <p>Fecha de emisión: <span id="reportDate" class="text-white"></span></p>
+                <p>Nivel de Confianza: <span class="text-emerald-400 font-bold">98.4%</span></p>
+              </div>
+            </div>
+
+            <!-- Report Summary -->
+            <div class="grid grid-cols-3 gap-4 p-4 rounded-xl bg-dark-bg border border-dark-border text-center">
+              <div>
+                <span class="text-[10px] text-gray-400 uppercase">Probabilidad de Quiebra</span>
+                <div class="text-lg font-bold text-amber-400" id="reportRiskVal">48% (Riesgo Medio)</div>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 uppercase">Score Altman Z</span>
+                <div class="text-lg font-bold text-white" id="reportAltmanVal">1.82</div>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 uppercase">Salud de Liquidez</span>
+                <div class="text-lg font-bold text-amber-400" id="reportLiquidityVal">1.15</div>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-white uppercase tracking-wider border-b border-dark-border pb-1">1. Diagnóstico de Solvencia</h5>
+              <p class="leading-relaxed text-gray-300">
+                La entidad presenta una estructura de pasivo circulante que requiere especial atención durante los próximos dos trimestres. Aunque el margen bruto se mantiene en rangos aceptables, la rotación de cuentas por cobrar evidencia un ligero rezago de 12 días por encima del promedio del sector.
+              </p>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-white uppercase tracking-wider border-b border-dark-border pb-1">2. Plan de Acción Recomendado</h5>
+              <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
+                <li>Reestructurar $35,000 en obligaciones de corto plazo hacia vencimientos de mediano plazo.</li>
+                <li>Implementar recorte de 8.5% en licencias de software no esenciales y servicios externos.</li>
+                <li>Ofrecer incentivos de pronto pago (2/10 neto 30) para acelerar la conversión de liquidez.</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- COMPANY SELECTOR MODAL -->
+  <div id="companyModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-dark-border pb-3">
+        <h3 class="text-sm font-bold text-white">Seleccionar Empresa Demo</h3>
+        <button onclick="toggleCompanyModal()" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        
+        <!-- Company 1: TechCorp -->
+        <div onclick="selectCompany('techcorp')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border cursor-pointer transition flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-950 text-indigo-400 font-bold flex items-center justify-center text-xs border border-indigo-800">
+              TC
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-white">TechCorp Solutions</div>
+              <div class="text-[10px] text-gray-400">Tecnología SaaS — Riesgo Medio (48%)</div>
+            </div>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+        </div>
+
+        <!-- Company 2: Restaurante El Sabor -->
+        <div onclick="selectCompany('restaurante')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border cursor-pointer transition flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-rose-950 text-rose-400 font-bold flex items-center justify-center text-xs border border-rose-800">
+              RS
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-white">Restaurante El Sabor</div>
+              <div class="text-[10px] text-gray-400">Gastronomía / Servicios — Riesgo Alto (78%)</div>
+            </div>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+        </div>
+
+        <!-- Company 3: Retail Express -->
+        <div onclick="selectCompany('retail')" class="p-3 rounded-xl bg-dark-bg hover:bg-dark-hover border border-dark-border cursor-pointer transition flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-950 text-emerald-400 font-bold flex items-center justify-center text-xs border border-emerald-800">
+              RE
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-white">Innovate Retail Express</div>
+              <div class="text-[10px] text-gray-400">Comercio Minorista — Riesgo Bajo (14%)</div>
+            </div>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC & AUTH DATABASE SYSTEM -->
+  <script>
+    // --- PERSISTENT USER DATABASE SYSTEM (STORAGE IN LOCALSTORAGE) ---
+    const defaultUsers = [
+      { name: "Ing. Yeiner Quintero", email: "yeiner@riskvision.ai", pass: "123", initials: "YQ" },
+      { name: "Usuario Demo", email: "demo@riskvision.ai", pass: "123", initials: "UD" }
+    ];
+
+    function getUsersDB() {
+      const stored = localStorage.getItem('RV_USER_DB');
+      if(!stored) {
+        localStorage.setItem('RV_USER_DB', JSON.stringify(defaultUsers));
+        return defaultUsers;
+      }
+      return JSON.parse(stored);
+    }
+
+    function saveUserToDB(userObj) {
+      const db = getUsersDB();
+      db.push(userObj);
+      localStorage.setItem('RV_USER_DB', JSON.stringify(db));
+    }
+
+    let activeUser = JSON.parse(localStorage.getItem('RV_CURRENT_USER')) || null;
+
+    function initAuth() {
+      if(!activeUser) {
+        document.getElementById('authOverlay').classList.remove('hidden');
+      } else {
+        document.getElementById('authOverlay').classList.add('hidden');
+        updateUserUI();
+      }
+    }
+
+    function switchAuthView(view) {
+      const loginF = document.getElementById('loginForm');
+      const regF = document.getElementById('registerForm');
+      const subtitle = document.getElementById('authSubtitle');
+      
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('registerError').classList.add('hidden');
+
+      if(view === 'register') {
+        loginF.classList.add('hidden');
+        regF.classList.remove('hidden');
+        subtitle.innerText = "Crea una nueva cuenta de usuario guardada";
+      } else {
+        regF.classList.add('hidden');
+        loginF.classList.remove('hidden');
+        subtitle.innerText = "Inicia sesión en tu cuenta corporativa para acceder";
+      }
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('loginPassword').value;
+      const errBox = document.getElementById('loginError');
+
+      const users = getUsersDB();
+      const found = users.find(u => u.email.toLowerCase() === email && u.pass === pass);
+
+      if(found) {
+        activeUser = found;
+        localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
+        document.getElementById('authOverlay').classList.add('hidden');
+        updateUserUI();
+      } else {
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('regPassword').value;
+      const errBox = document.getElementById('registerError');
+      const errMsg = document.getElementById('registerErrorMsg');
+
+      const users = getUsersDB();
+      if(users.some(u => u.email.toLowerCase() === email)) {
+        errMsg.innerText = "El correo ya está registrado en la base de datos.";
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      // Compute Initials
+      const parts = name.split(' ');
+      let initials = parts[0].substring(0, 1).toUpperCase();
+      if(parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
+
+      const newUser = { name, email, pass, initials };
+      saveUserToDB(newUser);
+
+      // Auto login
+      activeUser = newUser;
+      localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
+      document.getElementById('authOverlay').classList.add('hidden');
+      updateUserUI();
+    }
+
+    function handleLogout() {
+      activeUser = null;
+      localStorage.removeItem('RV_CURRENT_USER');
+      switchAuthView('login');
+      document.getElementById('authOverlay').classList.remove('hidden');
+    }
+
+    function updateUserUI() {
+      if(!activeUser) return;
+      document.getElementById('userDisplayName').innerText = activeUser.name;
+      document.getElementById('userAvatarBadge').innerText = activeUser.initials;
+      document.getElementById('reportAuditorName').innerText = activeUser.name;
+    }
+
+    // --- DEMO DATASETS ---
+    const companiesData = {
+      techcorp: {
+        name: "TechCorp Solutions",
+        industry: "Tecnología SaaS",
+        avatar: "TC",
+        sales: 145000,
+        cogs: 42000,
+        expenses: 84800,
+        netProfit: 18200,
+        currentAssets: 95000,
+        currentLiabilities: 82500,
+        totalDebt: 120000,
+        riskScore: 48,
+        riskBadge: "Riesgo Medio",
+        riskClass: "risk-medium",
+        altmanScore: 1.82,
+        riskTitle: "Presión de Liquidez a Corto Plazo",
+        riskDesc: "La empresa presenta un margen ajustado de capital de trabajo y concentración de pasivo circulante para los próximos 90 días.",
+        aiAction: "Reducir gastos operativos un 8.5% y renegociar plazos con los 2 principales proveedores de licencias.",
+        topExpense: "Nómina y Servicios Cloud (52%)",
+        savings: "$12,400 / mes",
+        alerts: [
+          { type: 'warning', text: 'Pasivo circulante representa el 68% de las obligaciones totales.' },
+          { type: 'info', text: 'Margen bruto estable en 71%, pero gastos de comercialización aumentaron 14%.' },
+          { type: 'danger', text: 'Días promedio de cobro a clientes se extendieron a 48 días.' }
+        ]
+      },
+      restaurante: {
+        name: "Restaurante El Sabor",
+        industry: "Gastronomía / Servicios",
+        avatar: "RS",
+        sales: 68000,
+        cogs: 34000,
+        expenses: 31000,
+        netProfit: 3000,
+        currentAssets: 18000,
+        currentLiabilities: 38000,
+        totalDebt: 85000,
+        riskScore: 78,
+        riskBadge: "Riesgo Alto",
+        riskClass: "risk-high",
+        altmanScore: 1.15,
+        riskTitle: "Insolvencia Potencial por Alto Endeudamiento",
+        riskDesc: "Capital de trabajo negativo (-$20,000). Los ingresos no cubren holgadamente el servicio de deuda y alquileres.",
+        aiAction: "Aumentar precios en menú 6%, optimizar mermas de insumos e implementar plan de choque de caja.",
+        topExpense: "Insumos Pereira y Alquiler Local (64%)",
+        savings: "$7,800 / mes",
+        alerts: [
+          { type: 'danger', text: 'Capital de trabajo es negativo (-$20,000). Riesgo iliquidez inmediato.' },
+          { type: 'danger', text: 'Flujo de caja libre cubriría únicamente 1.2 meses de operación.' },
+          { type: 'warning', text: 'Disminución de clientes nocturnos en un 18% en el último trimestre.' }
+        ]
+      },
+      retail: {
+        name: "Innovate Retail Express",
+        industry: "Comercio Minorista",
+        avatar: "RE",
+        sales: 320000,
+        cogs: 195000,
+        expenses: 72000,
+        netProfit: 53000,
+        currentAssets: 210000,
+        currentLiabilities: 95000,
+        totalDebt: 110000,
+        riskScore: 14,
+        riskBadge: "Riesgo Bajo",
+        riskClass: "risk-low",
+        altmanScore: 3.45,
+        riskTitle: "Excelente Salud y Solvencia Operativa",
+        riskDesc: "Elevada cobertura de liquidez (2.21x) y sólida generación de flujo operativo para expansión.",
+        aiAction: "Reinvertir $20,000 excedentes en inventario de alta rotación para maximizar descuento por volumen.",
+        topExpense: "Costo de Mercadería y Logística (58%)",
+        savings: "$18,900 / mes",
+        alerts: [
+          { type: 'success', text: 'Ratio de liquidez corriente sólido en 2.21 (Zona Segura).' },
+          { type: 'info', text: 'Rotación de inventarios óptima (8.2 veces por año).' }
+        ]
+      }
+    };
+
+    let activeCompanyKey = 'techcorp';
+    let activeCompany = companiesData[activeCompanyKey];
+
+    // --- CHART INSTANCES ---
+    let salesChartInstance = null;
+    let pieChartInstance = null;
+    let radarChartInstance = null;
+    let predictChartInstance = null;
+
+    // --- INIT APP ---
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initAuth();
+      document.getElementById('reportDate').innerText = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+      renderCompanyData();
+      initCharts();
+    });
+
+    // --- TAB NAVIGATION ---
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'chat', 'predictive', 'editor', 'reports'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        if(navBtn) {
+          navBtn.classList.remove('active', 'bg-brand-600/10', 'border', 'border-brand-500/20', 'text-brand-400');
+          navBtn.classList.add('text-gray-400');
+        }
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if(activeNav) {
+        activeNav.classList.add('active', 'bg-brand-600/10', 'border', 'border-brand-500/20', 'text-brand-400');
+        activeNav.classList.remove('text-gray-400');
+      }
+
+      // Title Update
+      const titles = {
+        dashboard: "Dashboard de Diagnóstico Financiero",
+        chat: "Consultor Financiero Automatizado",
+        predictive: "Modelos Predictivos y Simulador de Quiebra",
+        editor: "Editor de Métricas Financieras",
+        reports: "Informe Ejecutivo de Auditoría"
+      };
+      document.getElementById('pageTitle').innerText = titles[tabId] || "RiskVision Pro";
+
+      if(tabId === 'predictive' && predictChartInstance) {
+        setTimeout(() => predictChartInstance.update(), 100);
+      }
+    }
+
+    // --- COMPANY SELECTION ---
+    function toggleCompanyModal() {
+      document.getElementById('companyModal').classList.toggle('hidden');
+    }
+
+    function selectCompany(key) {
+      activeCompanyKey = key;
+      activeCompany = companiesData[key];
+      toggleCompanyModal();
+      renderCompanyData();
+      updateChartsData();
+    }
+
+    // --- RENDER DATA TO UI ---
+    function renderCompanyData() {
+      const c = activeCompany;
+      
+      // Sidebar & Header
+      document.getElementById('currentCompanyName').innerText = c.name;
+      document.getElementById('currentCompanyIndustry').innerText = c.industry;
+      document.getElementById('currentCompanyAvatar').innerText = c.avatar;
+      document.getElementById('chatCompanyName').innerText = c.name;
+      document.getElementById('reportCompanyName').innerText = c.name;
+
+      // Risk Hero Gauge
+      document.getElementById('riskScoreVal').innerText = `${c.riskScore}%`;
+      document.getElementById('altmanVal').innerText = c.altmanScore;
+      document.getElementById('riskTitle').innerText = c.riskTitle;
+      document.getElementById('riskDescription').innerText = c.riskDesc;
+      document.getElementById('aiActionPrompt').innerText = c.aiAction;
+
+      const badge = document.getElementById('riskBadge');
+      badge.innerText = c.riskBadge;
+      if(c.riskScore > 60) {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 uppercase tracking-wide";
+      } else if(c.riskScore > 30) {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wide";
+      } else {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide";
+      }
+
+      const offset = 339.29 - (339.29 * c.riskScore / 100);
+      document.getElementById('riskMeterCircle').style.strokeDashoffset = offset;
+
+      // KPIs
+      document.getElementById('kpiSales').innerText = `$${c.sales.toLocaleString()}`;
+      document.getElementById('kpiNetProfit').innerText = `$${c.netProfit.toLocaleString()}`;
+      
+      const margin = ((c.netProfit / c.sales) * 100).toFixed(1);
+      document.getElementById('kpiNetMargin').innerText = `${margin}%`;
+
+      const liquidityRatio = (c.currentAssets / c.currentLiabilities).toFixed(2);
+      document.getElementById('kpiLiquidity').innerText = liquidityRatio;
+      
+      const debtRatio = ((c.totalDebt / (c.currentAssets * 1.5)) * 100).toFixed(1);
+      document.getElementById('kpiDebtRatio').innerText = `${debtRatio}%`;
+
+      document.getElementById('topExpenseCategory').innerText = c.topExpense;
+      document.getElementById('potentialSavingsVal').innerText = c.savings;
+
+      // Report tab values
+      document.getElementById('reportRiskVal').innerText = `${c.riskScore}% (${c.riskBadge})`;
+      document.getElementById('reportAltmanVal').innerText = c.altmanScore;
+      document.getElementById('reportLiquidityVal').innerText = liquidityRatio;
+
+      // Editor inputs sync
+      document.getElementById('inputSales').value = c.sales;
+      document.getElementById('inputCOGS').value = c.cogs;
+      document.getElementById('inputExpenses').value = c.expenses;
+      document.getElementById('inputCurrentAssets').value = c.currentAssets;
+      document.getElementById('inputCurrentLiabilities').value = c.currentLiabilities;
+      document.getElementById('inputTotalDebt').value = c.totalDebt;
+
+      // Alerts Container Render
+      const container = document.getElementById('alertsContainer');
+      container.innerHTML = '';
+      c.alerts.forEach(a => {
+        let colorClass = 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300';
+        let icon = 'info';
+        if(a.type === 'danger') { colorClass = 'bg-rose-500/10 border-rose-500/20 text-rose-300'; icon = 'shield-alert'; }
+        if(a.type === 'warning') { colorClass = 'bg-amber-500/10 border-amber-500/20 text-amber-300'; icon = 'alert-triangle'; }
+        if(a.type === 'success') { colorClass = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'; icon = 'check-circle-2'; }
+
+        container.innerHTML += `
+          <div class="p-3 rounded-xl border ${colorClass} text-xs flex items-center gap-2.5">
+            <i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i>
+            <span>${a.text}</span>
+          </div>
+        `;
+      });
+      lucide.createIcons();
+    }
+
+    // --- INITIALIZE CHARTS ---
+    function initCharts() {
+      // 1. Sales vs Expenses Line Chart
+      const ctx1 = document.getElementById('salesExpensesChart').getContext('2d');
+      salesChartInstance = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun (Proy)'],
+          datasets: [
+            {
+              label: 'Ventas',
+              data: [120000, 132000, 128000, 140000, activeCompany.sales, activeCompany.sales * 1.05],
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Gastos Totales',
+              data: [110000, 115000, 112000, 122000, activeCompany.expenses + activeCompany.cogs, (activeCompany.expenses + activeCompany.cogs) * 0.98],
+              borderColor: '#f43f5e',
+              backgroundColor: 'transparent',
+              borderDash: [5, 5],
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } }
+          }
+        }
+      });
+
+      // 2. Expenses Doughnut Chart
+      const ctx2 = document.getElementById('expensesPieChart').getContext('2d');
+      pieChartInstance = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Nómina', 'Servicios Cloud', 'Marketing', 'Alquiler', 'Otros'],
+          datasets: [{
+            data: [48, 20, 15, 12, 5],
+            backgroundColor: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#3b82f6'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: '#d1d5db', font: { size: 10 } } } },
+          cutout: '70%'
+        }
+      });
+
+      // 3. Financial Radar Chart
+      const ctx3 = document.getElementById('financialRadarChart').getContext('2d');
+      radarChartInstance = new Chart(ctx3, {
+        type: 'radar',
+        data: {
+          labels: ['Liquidez', 'Solvencia', 'Rentabilidad', 'Eficiencia', 'Crecimiento'],
+          datasets: [{
+            label: activeCompany.name,
+            data: [65, 55, 78, 70, 82],
+            borderColor: '#818cf8',
+            backgroundColor: 'rgba(129, 140, 248, 0.2)',
+            pointBackgroundColor: '#818cf8'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              angleLines: { color: 'rgba(255,255,255,0.1)' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              pointLabels: { color: '#9ca3af', font: { size: 9 } },
+              ticks: { display: false }
+            }
+          }
+        }
+      });
+
+      // 4. Predictive Simulation Line Chart
+      const ctx4 = document.getElementById('predictiveChart').getContext('2d');
+      predictChartInstance = new Chart(ctx4, {
+        type: 'line',
+        data: {
+          labels: ['Mes 1', 'Mes 2', 'Mes 3', 'Mes 4', 'Mes 5', 'Mes 6'],
+          datasets: [
+            {
+              label: 'Escenario Base',
+              data: [95000, 92000, 89000, 87000, 85000, 82000],
+              borderColor: '#6366f1',
+              tension: 0.3
+            },
+            {
+              label: 'Escenario Simulado',
+              data: [95000, 92000, 89000, 87000, 85000, 82000],
+              borderColor: '#f59e0b',
+              borderDash: [4, 4],
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } }
+          }
+        }
+      });
+    }
+
+    function updateChartsData() {
+      if(!salesChartInstance) return;
+      salesChartInstance.data.datasets[0].data[4] = activeCompany.sales;
+      salesChartInstance.data.datasets[0].data[5] = activeCompany.sales * 1.05;
+      salesChartInstance.data.datasets[1].data[4] = activeCompany.expenses + activeCompany.cogs;
+      salesChartInstance.update();
+
+      radarChartInstance.data.datasets[0].label = activeCompany.name;
+      radarChartInstance.data.datasets[0].data = [
+        Math.min(100, (activeCompany.currentAssets / activeCompany.currentLiabilities) * 50),
+        Math.max(10, 100 - activeCompany.riskScore),
+        Math.min(100, (activeCompany.netProfit / activeCompany.sales) * 400),
+        72,
+        68
+      ];
+      radarChartInstance.update();
+    }
+
+    // --- AUTOMATED QUESTION CHIP SYSTEM ---
+    function triggerAutomatedQuestion(qKey) {
+      const c = activeCompany;
+      const container = document.getElementById('chatMessages');
+
+      const questionsMap = {
+        creador: {
+          question: "¿Quién es tu creador?",
+          answer: "Fui desarrollado por el <strong>Ingeniero de Sistemas Yeiner Quintero</strong> como una plataforma profesional de arquitectura limpia e Inteligencia Financiera para la prevención de insolvencia y auditoría de riesgo empresarial."
+        },
+        riesgo: {
+          question: "¿Mi empresa está en riesgo de quiebra y por qué?",
+          answer: `Basándome en los estados financieros de <strong>${c.name}</strong>, el porcentaje de probabilidad de quiebra actual es del <strong>${c.riskScore}% (${c.riskBadge})</strong> con un score Altman Z de <strong>${c.altmanScore}</strong>.<br><br><strong>Diagnóstico clave:</strong> ${c.riskDesc}`
+        },
+        gastos: {
+          question: "¿Qué gastos innecesarios debo reducir este mes?",
+          answer: `El rubro con mayor concentración de egresos en <strong>${c.name}</strong> es <strong>${c.topExpense}</strong>.<br><br>Aplicando la reestructuración preventiva recomendada, podrías liberar hasta <strong>${c.savings}</strong> mensuales en liquidez directa.`
+        },
+        caida_ventas: {
+          question: "¿Qué pasaría si las ventas disminuyen un 15%?",
+          answer: `Si las ventas caen un 15% (pasando a $${(c.sales * 0.85).toLocaleString()} USD), la utilidad neta cambiaría a <strong>$${(c.sales * 0.85 - (c.cogs + c.expenses)).toLocaleString()} USD</strong>.<br><br>El nivel de riesgo de quiebra aumentaría +18%, acortando el runway de caja a menos de 3.2 meses.`
+        },
+        producto: {
+          question: "¿Qué línea genera menor utilidad?",
+          answer: `En la matriz de productos de <strong>${c.name}</strong>, la categoría secundaria registra un margen bruto del 14.2% frente al promedio general del 48%. Se sugiere discontinuar o subir precios un 8% en esa unidad.`
+        },
+        deuda: {
+          question: "¿Cuál es el nivel de endeudamiento y solvencia?",
+          answer: `La cobertura de Liquidez Corriente es de <strong>${(c.currentAssets / c.currentLiabilities).toFixed(2)}</strong> (Activos: $${c.currentAssets.toLocaleString()} / Pasivos: $${c.currentLiabilities.toLocaleString()}).<br><br>El endeudamiento representa el <strong>${((c.totalDebt / (c.currentAssets * 1.5)) * 100).toFixed(1)}%</strong> sobre la estructura patrimonial.`
+        }
+      };
+
+      const item = questionsMap[qKey];
+      if(!item) return;
+
+      // User Bubble
+      container.innerHTML += `
+        <div class="flex gap-3 max-w-2xl ml-auto flex-row-reverse">
+          <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0 font-bold text-xs">
+            ${activeUser ? activeUser.initials : 'TU'}
+          </div>
+          <div class="bg-brand-600/20 border border-brand-500/30 p-4 rounded-2xl rounded-tr-none text-xs text-white leading-relaxed">
+            ${item.question}
+          </div>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+
+      // Bot Answer Bubble
+      setTimeout(() => {
+        container.innerHTML += `
+          <div class="flex gap-3 max-w-2xl">
+            <div class="w-8 h-8 rounded-lg bg-brand-600/30 text-brand-300 border border-brand-500/30 flex items-center justify-center shrink-0 font-bold text-xs">
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <div class="bg-dark-card border border-dark-border p-4 rounded-2xl rounded-tl-none text-xs text-gray-200 leading-relaxed shadow-sm">
+              ${item.answer}
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+        container.scrollTop = container.scrollHeight;
+      }, 300);
+    }
+
+    function clearChatHistory() {
+      document.getElementById('chatMessages').innerHTML = `
+        <div class="flex gap-3 max-w-2xl">
+          <div class="w-8 h-8 rounded-lg bg-brand-600/30 text-brand-300 border border-brand-500/30 flex items-center justify-center shrink-0 font-bold text-xs"><i data-lucide="cpu" class="w-4 h-4"></i></div>
+          <div class="bg-dark-card border border-dark-border p-4 rounded-2xl rounded-tl-none text-xs text-gray-200 leading-relaxed shadow-sm">
+            Pantalla reiniciada. Selecciona una pregunta automatizada de abajo.
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- PREDICTIVE SIMULATOR LOGIC ---
+    function updateSimulation() {
+      const salesVar = parseInt(document.getElementById('simSalesSlider').value);
+      const costsVar = parseInt(document.getElementById('simCostsSlider').value);
+      const expCut = parseInt(document.getElementById('simExpensesSlider').value);
+
+      document.getElementById('simSalesVal').innerText = `${salesVar >= 0 ? '+' : ''}${salesVar}%`;
+      document.getElementById('simCostsVal').innerText = `${costsVar >= 0 ? '+' : ''}${costsVar}%`;
+      document.getElementById('simExpensesVal').innerText = `-${expCut}%`;
+
+      const baseSales = activeCompany.sales * (1 + salesVar / 100);
+      const baseCosts = activeCompany.cogs * (1 + costsVar / 100);
+      const baseExpenses = activeCompany.expenses * (1 - expCut / 100);
+      const simNetProfit = baseSales - (baseCosts + baseExpenses);
+
+      let newRisk = activeCompany.riskScore - (salesVar * 0.8) + (costsVar * 0.9) - (expCut * 0.7);
+      newRisk = Math.max(5, Math.min(95, Math.round(newRisk)));
+
+      const runway = Math.max(0.8, (activeCompany.currentAssets / (baseExpenses + baseCosts / 3)).toFixed(1));
+
+      document.getElementById('simRiskResult').innerText = `${newRisk}%`;
+      document.getElementById('simRunwayResult').innerText = `${runway} Meses`;
+      document.getElementById('simProfitResult').innerText = `$${Math.round(simNetProfit).toLocaleString()}`;
+
+      if(predictChartInstance) {
+        predictChartInstance.data.datasets[1].data = [
+          activeCompany.currentAssets,
+          activeCompany.currentAssets + (simNetProfit * 1),
+          activeCompany.currentAssets + (simNetProfit * 2),
+          activeCompany.currentAssets + (simNetProfit * 3),
+          activeCompany.currentAssets + (simNetProfit * 4),
+          activeCompany.currentAssets + (simNetProfit * 5)
+        ];
+        predictChartInstance.update();
+      }
+
+      document.getElementById('simDiagnosticText').innerHTML = `
+        Bajo este escenario simulado, la utilidad mensual proyectada es de <strong>$${Math.round(simNetProfit).toLocaleString()}</strong> y la probabilidad de quiebra se ajusta al <strong>${newRisk}%</strong>. 
+        El runway de capital cubre <strong>${runway} meses</strong> de operación continua.
+      `;
+    }
+
+    function resetSimulator() {
+      document.getElementById('simSalesSlider').value = 0;
+      document.getElementById('simCostsSlider').value = 0;
+      document.getElementById('simExpensesSlider').value = 0;
+      updateSimulation();
+    }
+
+    // --- FORM DATA UPDATE ---
+    function handleFinancialDataUpdate(e) {
+      e.preventDefault();
+      activeCompany.sales = parseFloat(document.getElementById('inputSales').value) || 100000;
+      activeCompany.cogs = parseFloat(document.getElementById('inputCOGS').value) || 50000;
+      activeCompany.expenses = parseFloat(document.getElementById('inputExpenses').value) || 30000;
+      activeCompany.currentAssets = parseFloat(document.getElementById('inputCurrentAssets').value) || 80000;
+      activeCompany.currentLiabilities = parseFloat(document.getElementById('inputCurrentLiabilities').value) || 60000;
+      activeCompany.totalDebt = parseFloat(document.getElementById('inputTotalDebt').value) || 100000;
+
+      activeCompany.netProfit = activeCompany.sales - (activeCompany.cogs + activeCompany.expenses);
+
+      const quickRatio = activeCompany.currentAssets / activeCompany.currentLiabilities;
+      const debtRatio = activeCompany.totalDebt / (activeCompany.currentAssets * 1.5);
+      
+      let calculatedRisk = Math.round((debtRatio * 45) + ((2 - quickRatio) * 30));
+      calculatedRisk = Math.max(8, Math.min(92, calculatedRisk));
+      activeCompany.riskScore = calculatedRisk;
+
+      if(calculatedRisk > 60) { activeCompany.riskBadge = "Riesgo Alto"; }
+      else if(calculatedRisk > 30) { activeCompany.riskBadge = "Riesgo Medio"; }
+      else { activeCompany.riskBadge = "Riesgo Bajo"; }
+
+      renderCompanyData();
+      updateChartsData();
+      switchTab('dashboard');
+    }
+
+    function exportAuditReport() {
+      switchTab('reports');
+      setTimeout(() => window.print(), 300);
+    }
+  </script>
+</body>
+</html>

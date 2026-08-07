@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+dist/
+.next/
+out/
+
+# Entorno
+.env
+.env.local
+.env*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Otros
+coverage/
+tsconfig.tsbuildinfo
