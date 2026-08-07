@@ -905,59 +905,97 @@
   <!-- APPLICATION LOGIC & AUTH DATABASE SYSTEM -->
   <script>
     // =====================================================
-    // SUPABASE AUTH — Base de Datos en la Nube Real
-    // Proyecto: Financial-Risk-Insolvency-Prediction-Platform
+    // SISTEMA HÍBRIDO DE AUTENTICACIÓN
+    // - En Vercel / HTTPS  → Supabase Auth (nube real)
+    // - En archivo local file:// → localStorage (offline)
     // =====================================================
     const SUPABASE_URL = "https://oaanubskenojmkgiqgm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hYWh1dHhrZW5jb2pta2dxaWdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzIyNzIsImV4cCI6MjEwMTcwODI3Mn0.lulHOACh0UTRvHF4AC3wsgMbHxBvX5h3UlO_oVrjv20";
+
+    // Detectar si está corriendo en local (file://) o en la web (https://)
+    const IS_LOCAL = window.location.protocol === 'file:';
 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let activeUser = null;
 
-    // LOGIN usando Supabase Auth oficial
+    // ── MODO LOCAL (localStorage) ──────────────────────
+    function getLocalDB() {
+      try { return JSON.parse(localStorage.getItem('RV_USER_DB') || '[]'); } catch(e) { return []; }
+    }
+    function saveLocalDB(db) {
+      localStorage.setItem('RV_USER_DB', JSON.stringify(db));
+    }
+    function getInitials(name) {
+      const p = name.trim().split(' ');
+      let i = p[0].substring(0, 1).toUpperCase();
+      if (p.length > 1) i += p[1].substring(0, 1).toUpperCase();
+      return i;
+    }
+
+    function loginLocal(email, pass) {
+      const db = getLocalDB();
+      return db.find(u => u.email === email.toLowerCase() && u.pass === pass) || null;
+    }
+    function registerLocal({ name, email, pass }) {
+      const db = getLocalDB();
+      if (db.find(u => u.email === email.toLowerCase())) throw new Error('already registered');
+      const initials = getInitials(name);
+      const user = { id: Date.now(), name, email: email.toLowerCase(), pass, initials };
+      db.push(user);
+      saveLocalDB(db);
+      return user;
+    }
+
+    // ── MODO NUBE (Supabase Auth) ──────────────────────
     async function loginWithSupabase(email, pass) {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
-      // Recuperar nombre del perfil guardado en user_metadata
       const meta = data.user?.user_metadata || {};
       const name = meta.full_name || data.user.email;
-      const parts = name.trim().split(' ');
-      let initials = parts[0].substring(0, 1).toUpperCase();
-      if (parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
-      return { id: data.user.id, name, email: data.user.email, initials };
+      return { id: data.user.id, name, email: data.user.email, initials: getInitials(name) };
     }
 
-    // REGISTRO usando Supabase Auth oficial
-    async function registerWithSupabase({ name, email, pass, initials }) {
+    async function registerWithSupabase({ name, email, pass }) {
       const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password: pass,
+        email, password: pass,
         options: { data: { full_name: name } }
       });
       if (error) throw error;
-      return { id: data.user.id, name, email: data.user.email, initials };
+      return { id: data.user.id, name, email: data.user.email, initials: getInitials(name) };
     }
 
-    // CERRAR SESIÓN usando Supabase Auth
     async function logoutFromSupabase() {
       await supabaseClient.auth.signOut();
     }
 
     async function initAuth() {
-      // Verificar sesión activa en Supabase
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session && session.user) {
-        const meta = session.user.user_metadata || {};
-        const name = meta.full_name || session.user.email;
-        const parts = name.trim().split(' ');
-        let initials = parts[0].substring(0, 1).toUpperCase();
-        if (parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
-        activeUser = { id: session.user.id, name, email: session.user.email, initials };
-        document.getElementById('authOverlay').classList.add('hidden');
-        updateUserUI();
+      if (IS_LOCAL) {
+        // Modo local: verificar sesión guardada en localStorage
+        const saved = JSON.parse(localStorage.getItem('RV_CURRENT_USER') || 'null');
+        if (saved) {
+          activeUser = saved;
+          document.getElementById('authOverlay').classList.add('hidden');
+          updateUserUI();
+        } else {
+          document.getElementById('authOverlay').classList.remove('hidden');
+        }
       } else {
-        document.getElementById('authOverlay').classList.remove('hidden');
+        // Modo nube: verificar sesión activa en Supabase
+        try {
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          if (session && session.user) {
+            const meta = session.user.user_metadata || {};
+            const name = meta.full_name || session.user.email;
+            activeUser = { id: session.user.id, name, email: session.user.email, initials: getInitials(name) };
+            document.getElementById('authOverlay').classList.add('hidden');
+            updateUserUI();
+          } else {
+            document.getElementById('authOverlay').classList.remove('hidden');
+          }
+        } catch(e) {
+          document.getElementById('authOverlay').classList.remove('hidden');
+        }
       }
     }
 
@@ -987,20 +1025,24 @@
       const errBox = document.getElementById('loginError');
 
       try {
-        const found = await loginWithSupabase(email, pass);
-        if(found) {
-          activeUser = found;
-          document.getElementById('authOverlay').classList.add('hidden');
-          updateUserUI();
+        let found;
+        if (IS_LOCAL) {
+          found = loginLocal(email, pass);
+          if (!found) throw new Error('invalid credentials');
         } else {
-          errBox.classList.remove('hidden');
+          found = await loginWithSupabase(email, pass);
         }
+        activeUser = found;
+        if (IS_LOCAL) localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
+        document.getElementById('authOverlay').classList.add('hidden');
+        updateUserUI();
       } catch(err) {
         let msg = "Correo o contraseña incorrectos.";
         if (err && err.message) {
           if (/email not confirmed/i.test(err.message)) msg = "Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.";
           else if (/invalid/i.test(err.message)) msg = "Correo o contraseña incorrectos.";
-          else msg = "Error de conexión con la base de datos.";
+          else if (/fetch/i.test(err.message)) msg = "Sin conexión a internet.";
+          else msg = err.message;
         }
         document.getElementById('loginErrorMsg').innerText = msg;
         errBox.classList.remove('hidden');
@@ -1016,28 +1058,26 @@
       const errBox = document.getElementById('registerError');
       const errMsg = document.getElementById('registerErrorMsg');
 
-      // Compute Initials
-      const parts = name.split(' ');
-      let initials = parts[0].substring(0, 1).toUpperCase();
-      if(parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
-
       try {
-        const newUser = await registerWithSupabase({ name, email, pass, initials });
-        // Auto login post-registro
-        activeUser = newUser;
-        document.getElementById('authOverlay').classList.add('hidden');
-        updateUserUI();
-        // Si Supabase requiere confirmación de email, informar al usuario
-        if (!newUser.id) {
-          document.getElementById('authOverlay').classList.remove('hidden');
-          errMsg.innerText = "✅ Cuenta creada. Revisa tu correo para confirmar y luego inicia sesión.";
-          errBox.classList.remove('hidden');
+        let newUser;
+        if (IS_LOCAL) {
+          newUser = registerLocal({ name, email, pass });
+          activeUser = newUser;
+          localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
+          document.getElementById('authOverlay').classList.add('hidden');
+          updateUserUI();
+        } else {
+          newUser = await registerWithSupabase({ name, email, pass });
+          activeUser = newUser;
+          document.getElementById('authOverlay').classList.add('hidden');
+          updateUserUI();
         }
       } catch(err) {
         let msg = "No se pudo crear el usuario.";
         if (err && err.message) {
           if (/already registered|already exists|duplicate/i.test(err.message)) msg = "El correo ya está registrado. Inicia sesión.";
-          else if (/password/i.test(err.message)) msg = "La contraseña debe tener al menos 6 caracteres.";
+          else if (/password/i.test(err.message)) msg = "La contraseña debe tener al menos 6 caracteres (mínimo).";
+          else if (/fetch/i.test(err.message)) msg = "Sin conexión. Abre el archivo desde Vercel.";
           else msg = err.message;
         }
         errMsg.innerText = msg;
@@ -1048,7 +1088,11 @@
 
     async function handleLogout() {
       activeUser = null;
-      await logoutFromSupabase();
+      if (IS_LOCAL) {
+        localStorage.removeItem('RV_CURRENT_USER');
+      } else {
+        await logoutFromSupabase();
+      }
       switchAuthView('login');
       document.getElementById('authOverlay').classList.remove('hidden');
     }
