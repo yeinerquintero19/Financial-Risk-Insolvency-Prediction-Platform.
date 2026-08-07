@@ -1058,6 +1058,12 @@
       const errBox = document.getElementById('registerError');
       const errMsg = document.getElementById('registerErrorMsg');
 
+      if (pass.length < 6) {
+        errMsg.innerText = "La contraseña debe tener al menos 6 caracteres.";
+        errBox.classList.remove('hidden');
+        return;
+      }
+
       try {
         let newUser;
         if (IS_LOCAL) {
@@ -1067,19 +1073,39 @@
           document.getElementById('authOverlay').classList.add('hidden');
           updateUserUI();
         } else {
-          newUser = await registerWithSupabase({ name, email, pass });
-          activeUser = newUser;
-          document.getElementById('authOverlay').classList.add('hidden');
-          updateUserUI();
+          // Supabase Auth
+          const { data, error } = await supabaseClient.auth.signUp({
+            email, password: pass,
+            options: { data: { full_name: name } }
+          });
+          if (error) throw error;
+
+          if (data.session) {
+            // Registro exitoso E inicio de sesión directo (confirmación desactivada)
+            const initials = getInitials(name);
+            activeUser = { id: data.user.id, name, email: data.user.email, initials };
+            document.getElementById('authOverlay').classList.add('hidden');
+            updateUserUI();
+          } else {
+            // Supabase requiere confirmar correo - mostrar aviso amigable
+            errBox.style.background = 'rgba(16,185,129,0.1)';
+            errBox.style.borderColor = 'rgba(16,185,129,0.3)';
+            errMsg.style.color = '#34d399';
+            errMsg.innerText = "✅ Cuenta creada. Revisa tu bandeja de entrada y confirma tu correo " + email + " para poder iniciar sesión. (También revisa spam)";
+            errBox.classList.remove('hidden');
+          }
         }
       } catch(err) {
         let msg = "No se pudo crear el usuario.";
         if (err && err.message) {
-          if (/already registered|already exists|duplicate/i.test(err.message)) msg = "El correo ya está registrado. Inicia sesión.";
-          else if (/password/i.test(err.message)) msg = "La contraseña debe tener al menos 6 caracteres (mínimo).";
-          else if (/fetch/i.test(err.message)) msg = "Sin conexión. Abre el archivo desde Vercel.";
+          if (/already registered|already exists|user already registered/i.test(err.message)) msg = "Este correo ya tiene una cuenta. Haz clic en \"Iniciar Sesión\".";
+          else if (/password/i.test(err.message)) msg = "La contraseña debe tener al menos 6 caracteres.";
+          else if (/fetch/i.test(err.message)) msg = "Error de conexión. Verifica tu internet.";
+          else if (/invalid email/i.test(err.message)) msg = "El correo electrónico no es válido.";
           else msg = err.message;
         }
+        errBox.style = '';
+        errMsg.style = '';
         errMsg.innerText = msg;
         errBox.classList.remove('hidden');
         console.error(err);
