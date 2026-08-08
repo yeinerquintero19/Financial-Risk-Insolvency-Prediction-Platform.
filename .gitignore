@@ -1,6 +1,5 @@
 # Dependencias
 node_modules/
-dist/
 .next/
 out/
 

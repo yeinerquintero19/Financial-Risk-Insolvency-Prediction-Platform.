@@ -1,0 +1,24 @@
+{
+  "name": "restaurante",
+  "version": "1.0.0",
+  "description": "Plataforma SaaS de **Inteligencia Financiera** y **Predicción de Riesgo de Quiebra** diseñada con estética empresarial de alto nivel (inspirada en Stripe, Linear y Vercel).",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tailwindcss -i ./src/input.css -o ./dist/output.css --minify",
+    "dev": "npx tailwindcss -i ./src/input.css -o ./dist/output.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeinerquintero19/Financial-Risk-Insolvency-Prediction-Platform..git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yeinerquintero19/Financial-Risk-Insolvency-Prediction-Platform./issues"
+  },
+  "homepage": "https://github.com/yeinerquintero19/Financial-Risk-Insolvency-Prediction-Platform.#readme",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

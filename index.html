@@ -6,37 +6,8 @@
   <title>RiskVision Pro — Plataforma Inteligente de Salud Financiera y Predicción de Riesgo</title>
   <meta name="description" content="Detecta empresas en riesgo de quiebra mediante análisis financiero profundo y modelos predictivos avanzados.">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0f4ff',
-              100: '#e0e9fe',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-              900: '#1e1b4b',
-            },
-            dark: {
-              bg: '#090d16',
-              card: '#111726',
-              border: '#1f293d',
-              input: '#1a2234',
-              hover: '#182033'
-            }
-          },
-          fontFamily: {
-            sans: ['Outfit', 'Inter', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Tailwind CSS (compiled) -->
+  <link rel="stylesheet" href="/dist/output.css">
 
   <!-- Google Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -186,7 +157,7 @@
   </div>
 
   <!-- APP LAYOUT -->
-  <div class="flex h-screen overflow-hidden">
+  <div id="appLayout" class="flex h-screen overflow-hidden hidden">
 
     <!-- SIDEBAR NAV -->
     <aside class="w-64 bg-dark-bg border-r border-dark-border flex flex-col justify-between hidden md:flex z-20">
@@ -1046,28 +1017,39 @@
     }
 
     async function initAuth() {
-      // La app es pública - no se requiere login para ver el dashboard
-      // Solo se verifica si ya hay sesión activa para mostrar el nombre del usuario
+      // Verificar sesión activa — la plataforma solo es accesible tras autenticación
+      let hasSession = false;
+
       if (IS_LOCAL) {
+        // Modo local: verificar usuario guardado en localStorage
         const saved = JSON.parse(localStorage.getItem('RV_CURRENT_USER') || 'null');
         if (saved) {
           activeUser = saved;
-          updateUserUI();
+          hasSession = true;
         }
       } else {
+        // Modo nube: verificar sesión activa en Supabase
         try {
           const { data: { session } } = await supabaseClient.auth.getSession();
           if (session && session.user) {
             const meta = session.user.user_metadata || {};
             const name = meta.full_name || session.user.email;
             activeUser = { id: session.user.id, name, email: session.user.email, initials: getInitials(name) };
-            updateUserUI();
+            hasSession = true;
           }
         } catch(e) { /* sin sesión activa */ }
       }
-      // Siempre ocultar el overlay - acceso libre al dashboard
-      document.getElementById('authOverlay').classList.add('hidden');
-      updateUserUI();
+
+      if (hasSession) {
+        // Usuario autenticado: mostrar la plataforma y ocultar el overlay
+        document.getElementById('authOverlay').classList.add('hidden');
+        document.getElementById('appLayout').classList.remove('hidden');
+        updateUserUI();
+      } else {
+        // Sin sesión: mantener el overlay visible, plataforma bloqueada
+        document.getElementById('authOverlay').classList.remove('hidden');
+        document.getElementById('appLayout').classList.add('hidden');
+      }
     }
 
     function switchAuthView(view) {
@@ -1106,6 +1088,7 @@
         activeUser = found;
         if (IS_LOCAL) localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
         document.getElementById('authOverlay').classList.add('hidden');
+        document.getElementById('appLayout').classList.remove('hidden');
         updateUserUI();
       } catch(err) {
         let msg = "Correo o contraseña incorrectos.";
@@ -1142,6 +1125,7 @@
           activeUser = newUser;
           localStorage.setItem('RV_CURRENT_USER', JSON.stringify(activeUser));
           document.getElementById('authOverlay').classList.add('hidden');
+          document.getElementById('appLayout').classList.remove('hidden');
           updateUserUI();
         } else {
           // Supabase Auth
@@ -1156,6 +1140,7 @@
             const initials = getInitials(name);
             activeUser = { id: data.user.id, name, email: data.user.email, initials };
             document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('appLayout').classList.remove('hidden');
             updateUserUI();
           } else {
             // Supabase requiere confirmar correo - mostrar aviso amigable
@@ -1192,6 +1177,7 @@
       }
       switchAuthView('login');
       document.getElementById('authOverlay').classList.remove('hidden');
+      document.getElementById('appLayout').classList.add('hidden');
     }
 
     function openAuthOverlay() {
