@@ -1,8 +1,6 @@
 {
   "version": 2,
   "name": "riskvision-ai",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".",
   "cleanUrls": true,
   "routes": [
     {
